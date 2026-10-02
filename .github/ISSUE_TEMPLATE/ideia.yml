@@ -1,0 +1,42 @@
+name: Ideia
+description: Proponha algo novo para o jogo (regra, mundo, personagem, arte...)
+title: "[Ideia] "
+labels: ["ideia"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por contribuir! Depois de enviada, a ideia aparece na aba **Ideias** do site.
+        A equipe vota com 👍 e comenta aqui mesmo.
+  - type: textarea
+    id: resumo
+    attributes:
+      label: Resumo
+      description: Explique a ideia em poucas linhas.
+    validations:
+      required: true
+  - type: dropdown
+    id: categoria
+    attributes:
+      label: Categoria
+      options:
+        - Mecânicas
+        - Mundo e lore
+        - Narrativa
+        - Arte e visual
+        - Outro
+    validations:
+      required: true
+  - type: textarea
+    id: porque
+    attributes:
+      label: Por que isso melhora o jogo?
+    validations:
+      required: false
+  - type: textarea
+    id: exemplos
+    attributes:
+      label: Exemplos ou referências
+      description: Exemplos de uso na mesa, links, imagens.
+    validations:
+      required: false

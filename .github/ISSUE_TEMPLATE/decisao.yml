@@ -1,0 +1,35 @@
+name: Decisão consolidada
+description: Registre direto algo que a equipe já decidiu
+title: "[Decisão] "
+labels: ["consolidado"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use para registrar o que já está fechado. Aparece na aba **Consolidado**.
+        Para consolidar uma ideia que já existe, basta adicionar a etiqueta `consolidado` nela.
+  - type: textarea
+    id: decisao
+    attributes:
+      label: O que foi decidido
+    validations:
+      required: true
+  - type: dropdown
+    id: categoria
+    attributes:
+      label: Categoria
+      options:
+        - Mecânicas
+        - Mundo e lore
+        - Narrativa
+        - Arte e visual
+        - Outro
+    validations:
+      required: true
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto
+      description: Por que decidimos assim? Onde isso foi discutido?
+    validations:
+      required: false
