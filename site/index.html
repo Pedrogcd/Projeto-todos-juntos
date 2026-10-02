@@ -34,10 +34,13 @@
 
     <footer class="site-footer">
       <span>Feito pelos fundadores</span>
-      <a id="repo-link" href="#" target="_blank" rel="noopener" hidden>Repositório no GitHub ↗</a>
+      <button type="button" class="linklike" id="export" hidden>Baixar backup (.json)</button>
     </footer>
 
-    <noscript><p class="panel">Este site precisa de JavaScript para listar as ideias e pendências.</p></noscript>
+    <dialog id="dlg" class="dlg" aria-labelledby="dlg-title"></dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <noscript><p class="panel">Este site precisa de JavaScript para funcionar.</p></noscript>
     <script type="module" src="js/app.js"></script>
   </body>
 </html>

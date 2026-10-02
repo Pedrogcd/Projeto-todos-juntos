@@ -10,22 +10,24 @@ export const CONFIG = {
   // Parágrafos da seção "Sobre o projeto" na página inicial.
   about: [
     "Este é o espaço dos fundadores para reunir ideias, organizar o que ainda falta fazer e registrar o que já está decidido.",
-    "Qualquer fundador pode propor uma ideia, comentar nas dos outros e votar com um 👍. Quando a equipe concorda, a ideia vira pendência, depois entra em andamento e, por fim, fica consolidada.",
+    "Quem tem o link pode propor uma ideia, comentar, votar com 👍 e mover os itens pelas etapas: ideia, a fazer, em andamento e consolidado.",
   ],
 
-  // Quem aparece na seção "Fundadores". O campo "github" é o nome de usuário
-  // (usado para buscar a foto de perfil). Deixe vazio se a pessoa não tiver conta.
+  // Quem aparece na seção "Fundadores". O campo "github" é opcional
+  // (usado só para buscar a foto de perfil).
   founders: [
     { nome: "Pedro", papel: "Fundador", github: "Pedrogcd" },
     // { nome: "Nome", papel: "Fundador", github: "usuario-github" },
   ],
 
-  // Normalmente você NÃO precisa preencher isto: quando o site está no GitHub
-  // Pages, ele descobre sozinho o dono e o nome do repositório pela URL.
-  // Só preencha se usar um domínio próprio.
-  repo: { owner: "", name: "" },
+  // Dados do projeto no Supabase (Project Settings → API).
+  // A "anon key" / "publishable key" é pública por natureza: quem protege os dados
+  // são as regras do banco (supabase/schema.sql). NUNCA coloque aqui a "service_role".
+  supabase: {
+    url: "",
+    anonKey: "",
+  },
 
-  // Por quantos minutos o navegador guarda a última leitura do GitHub
-  // (evita estourar o limite de consultas da API pública).
-  cacheMinutes: 5,
+  // De quanto em quanto tempo o site busca novidades enquanto está aberto.
+  refreshSeconds: 60,
 };

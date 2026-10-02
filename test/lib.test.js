@@ -1,139 +1,99 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  detectRepo,
-  classifyIssue,
-  categoryFromBody,
-  normalizeIssue,
-  groupIssues,
-  fetchIssues,
-  newIssueUrl,
+  isConfigured,
+  normalizeItem,
+  groupItems,
+  validateDraft,
+  validateComment,
+  validateName,
+  escapeHtml,
+  textToHtml,
+  newVoterId,
+  STAGES,
 } from "../site/js/lib.js";
 
-const issue = (over = {}) => ({
-  number: 1,
-  title: "Ideia",
-  html_url: "https://github.com/o/r/issues/1",
-  state: "open",
-  labels: [{ name: "ideia" }],
-  body: "",
-  body_html: "<p>oi</p>",
-  user: { login: "pedro", avatar_url: "https://x/a.png" },
+const row = (over = {}) => ({
+  id: "11111111-1111-4111-8111-111111111111",
+  stage: "ideia",
+  title: "Atributos em graus",
+  body: "Texto",
+  category: "mecanica",
+  author: "Pedro",
+  last_editor: null,
   created_at: "2026-10-01T10:00:00Z",
   updated_at: "2026-10-01T10:00:00Z",
-  comments: 2,
-  reactions: { "+1": 3 },
+  rpg_votes: [{ count: 3 }],
+  rpg_comments: [{ count: 2 }],
   ...over,
 });
 
-const fakeStorage = () => {
-  const m = new Map();
-  return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) };
-};
-
-test("detectRepo: GitHub Pages de projeto, de usuário, ?repo= e config", () => {
-  assert.deepEqual(
-    detectRepo({ hostname: "pedrogcd.github.io", pathname: "/rpg-novo/", search: "" }),
-    { owner: "pedrogcd", name: "rpg-novo" }
-  );
-  assert.deepEqual(
-    detectRepo({ hostname: "pedrogcd.github.io", pathname: "/index.html", search: "" }),
-    { owner: "pedrogcd", name: "pedrogcd.github.io" }
-  );
-  assert.deepEqual(
-    detectRepo({ hostname: "localhost", pathname: "/", search: "?repo=a/b" }),
-    { owner: "a", name: "b" }
-  );
-  assert.deepEqual(
-    detectRepo({ hostname: "meusite.com", pathname: "/", search: "" }, { owner: "x", name: "y" }),
-    { owner: "x", name: "y" }
-  );
-  assert.equal(detectRepo({ hostname: "localhost", pathname: "/", search: "" }), null);
+test("isConfigured exige URL https e chave", () => {
+  assert.equal(isConfigured({ url: "", anonKey: "" }), false);
+  assert.equal(isConfigured({ url: "http://x.supabase.co", anonKey: "a".repeat(30) }), false);
+  assert.equal(isConfigured({ url: "https://x.supabase.co", anonKey: "curta" }), false);
+  assert.equal(isConfigured({ url: "https://x.supabase.co", anonKey: "a".repeat(30) }), true);
+  assert.equal(isConfigured(undefined), false);
 });
 
-test("classifyIssue: etapas e prioridade das etiquetas", () => {
-  assert.equal(classifyIssue(issue()).stage, "ideia");
-  assert.equal(classifyIssue(issue({ state: "closed" })).stage, "arquivada");
-  assert.equal(classifyIssue(issue({ labels: [{ name: "ideia" }, { name: "pendente" }] })).stage, "pendente");
-  assert.equal(classifyIssue(issue({ labels: ["pendente", "em-andamento"] })).stage, "andamento");
-  assert.equal(classifyIssue(issue({ labels: ["pendente"], state: "closed" })).stage, "concluida");
-  assert.equal(classifyIssue(issue({ labels: ["ideia", "consolidado"], state: "closed" })).stage, "consolidado");
-  assert.equal(classifyIssue(issue({ labels: ["bug"] })), null);
-});
-
-test("categoria vem da etiqueta ou do campo do formulário", () => {
-  assert.equal(classifyIssue(issue({ labels: ["ideia", "mundo"] })).category, "mundo");
-  assert.equal(categoryFromBody("### Resumo\n\nx\n\n### Categoria\n\nArte e visual\n"), "arte");
-  assert.equal(categoryFromBody("### Categoria\n\nMecânicas"), "mecanica");
-  assert.equal(categoryFromBody("sem campo"), null);
-  assert.equal(
-    classifyIssue(issue({ body: "### Categoria\n\nNarrativa" })).category,
-    "narrativa"
-  );
-});
-
-test("normalizeIssue ignora pull requests e issues fora do fluxo", () => {
-  assert.equal(normalizeIssue(issue({ pull_request: {} })), null);
-  assert.equal(normalizeIssue(issue({ labels: [] })), null);
-  const n = normalizeIssue(issue());
+test("normalizeItem traduz contagens, voto próprio e valores desconhecidos", () => {
+  const n = normalizeItem(row(), new Set(["11111111-1111-4111-8111-111111111111"]));
   assert.equal(n.votes, 3);
-  assert.equal(n.author, "pedro");
-  assert.equal(n.bodyHtml, "<p>oi</p>");
+  assert.equal(n.comments, 2);
+  assert.equal(n.voted, true);
+  assert.equal(n.category, "mecanica");
+
+  const m = normalizeItem(row({ stage: "xyz", category: "abc", rpg_votes: [], rpg_comments: undefined }));
+  assert.equal(m.stage, "ideia");
+  assert.equal(m.category, null);
+  assert.equal(m.votes, 0);
+  assert.equal(m.comments, 0);
+  assert.equal(m.voted, false);
 });
 
-test("groupIssues ordena ideias por votos e o resto por atualização", () => {
-  const mk = (id, votes, updated, stage = "ideia") => ({
-    id, votes, stage, createdAt: updated, updatedAt: updated,
+test("groupItems separa por etapa; ideias por votos, resto por atualização", () => {
+  const mk = (id, stage, votes, updated) => ({
+    id, stage, votes, createdAt: updated, updatedAt: updated,
   });
-  const g = groupIssues([
-    mk(1, 1, "2026-01-01"),
-    mk(2, 5, "2026-01-02"),
-    mk(3, 0, "2026-01-01", "pendente"),
-    mk(4, 0, "2026-02-01", "pendente"),
+  const g = groupItems([
+    mk("a", "ideia", 1, "2026-01-01"),
+    mk("b", "ideia", 5, "2026-01-02"),
+    mk("c", "pendente", 0, "2026-01-01"),
+    mk("d", "pendente", 0, "2026-02-01"),
+    mk("e", "consolidado", 0, "2026-02-01"),
   ]);
-  assert.deepEqual(g.ideia.map((i) => i.id), [2, 1]);
-  assert.deepEqual(g.pendente.map((i) => i.id), [4, 3]);
+  assert.deepEqual(g.ideia.map((i) => i.id), ["b", "a"]);
+  assert.deepEqual(g.pendente.map((i) => i.id), ["d", "c"]);
+  assert.equal(g.consolidado.length, 1);
+  assert.deepEqual(Object.keys(g), Object.keys(STAGES));
 });
 
-test("fetchIssues: rede, cache, cache antigo em caso de erro e erro sem cache", async () => {
-  const repo = { owner: "o", name: "r" };
-  const storage = fakeStorage();
-  let calls = 0;
-  const ok = async () => {
-    calls++;
-    return { ok: true, json: async () => [issue(), issue({ number: 2, pull_request: {} })] };
-  };
-  const r1 = await fetchIssues({ repo, fetchImpl: ok, storage, now: 1000 });
-  assert.equal(r1.source, "network");
-  assert.equal(r1.issues.length, 1);
-
-  const r2 = await fetchIssues({ repo, fetchImpl: ok, storage, now: 2000 });
-  assert.equal(r2.source, "cache");
-  assert.equal(calls, 1);
-
-  const limited = async () => ({ ok: false, status: 403 });
-  const r3 = await fetchIssues({ repo, fetchImpl: limited, storage, now: 10 * 60 * 1000 });
-  assert.equal(r3.stale, true);
-  assert.equal(r3.issues.length, 1);
-
-  await assert.rejects(
-    fetchIssues({ repo: { owner: "x", name: "y" }, fetchImpl: limited, storage: fakeStorage() }),
-    /403/
-  );
+test("validateDraft, validateComment e validateName", () => {
+  assert.match(validateDraft({ title: "  " }), /título/);
+  assert.match(validateDraft({ title: "x".repeat(141) }), /140/);
+  assert.match(validateDraft({ title: "ok", body: "x".repeat(6001) }), /6000/);
+  assert.match(validateDraft({ title: "ok", author: " " }), /nome/);
+  assert.equal(validateDraft({ title: "ok", body: "", author: "Ana" }), null);
+  assert.equal(validateDraft({ title: "ok" }), null);
+  assert.match(validateComment({ body: "" }), /comentário/);
+  assert.equal(validateComment({ body: "oi" }), null);
+  assert.match(validateName({ author: "" }), /nome/);
+  assert.equal(validateName({ author: "Ana" }), null);
 });
 
-test("fetchIssues pagina quando a página vem cheia", async () => {
-  const repo = { owner: "o", name: "r" };
-  const full = Array.from({ length: 100 }, (_, i) => issue({ number: i + 1 }));
-  let page = 0;
-  const f = async () => ({ ok: true, json: async () => (++page === 1 ? full : [issue({ number: 999 })]) });
-  const r = await fetchIssues({ repo, fetchImpl: f, force: true });
-  assert.equal(r.issues.length, 101);
+test("textToHtml escapa HTML, linka http(s) e preserva quebras", () => {
+  assert.equal(escapeHtml(`<b>"x"</b> & 'y'`), "&lt;b&gt;&quot;x&quot;&lt;/b&gt; &amp; &#39;y&#39;");
+  const html = textToHtml("<script>alert(1)</script>\nveja https://exemplo.com/a?b=1&c=2.");
+  assert.ok(!html.includes("<script>"));
+  assert.ok(html.includes("&lt;script&gt;"));
+  assert.ok(html.includes("<br>"));
+  assert.ok(html.includes('href="https://exemplo.com/a?b=1&amp;c=2"'));
+  assert.ok(html.endsWith("</a>."));
+  assert.ok(!textToHtml("javascript:alert(1)").includes("<a "));
 });
 
-test("newIssueUrl", () => {
-  assert.equal(
-    newIssueUrl({ owner: "o", name: "r" }, "ideia.yml"),
-    "https://github.com/o/r/issues/new?template=ideia.yml"
-  );
+test("newVoterId gera ids longos o bastante, com ou sem crypto", () => {
+  assert.ok(newVoterId().length >= 8);
+  const fallback = newVoterId({});
+  assert.ok(fallback.length >= 8 && fallback.length <= 64);
 });
