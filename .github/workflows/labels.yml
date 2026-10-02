@@ -1,0 +1,26 @@
+name: Criar etiquetas
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Criar etiquetas do fluxo
+        run: |
+          gh label create ideia         --color 6B5590 --description "Proposta aberta para a equipe votar" --force
+          gh label create pendente      --color A9762C --description "Aprovado, esperando alguém pegar"    --force
+          gh label create em-andamento  --color 4A6B96 --description "Alguém está trabalhando nisso"       --force
+          gh label create consolidado   --color 4A7A4E --description "Decidido e valendo para o jogo"      --force
+          gh label create mecanica      --color A83A2E --description "Categoria: mecânicas"                --force
+          gh label create mundo         --color 8B6914 --description "Categoria: mundo e lore"             --force
+          gh label create narrativa     --color 4B3B6B --description "Categoria: narrativa"                --force
+          gh label create arte          --color B8622A --description "Categoria: arte e visual"            --force
+          gh label create outro         --color 6B5D45 --description "Categoria: outro"                    --force
