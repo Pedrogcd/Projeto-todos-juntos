@@ -1,0 +1,11 @@
+{
+  "name": "rpg-novo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Site dos fundadores do novo sistema de RPG: ideias, pendências e o que já está consolidado.",
+  "scripts": {
+    "test": "node --test",
+    "dev": "python3 -m http.server 8080 --directory site"
+  }
+}
