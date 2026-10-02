@@ -67,6 +67,7 @@ create index if not exists rpg_history_item_idx
 create or replace function public.rpg_items_before_update()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.id         := old.id;
@@ -126,6 +127,7 @@ alter table public.rpg_history  enable row level security;
 -- Começa sem nada e libera só o necessário (note: sem DELETE em itens/comentários).
 revoke all on public.rpg_items, public.rpg_comments, public.rpg_votes, public.rpg_history
   from anon, authenticated;
+revoke execute on function public.rpg_items_audit() from public, anon, authenticated;
 
 grant select, insert, update on public.rpg_items    to anon, authenticated;
 grant select, insert         on public.rpg_comments to anon, authenticated;
