@@ -24,8 +24,8 @@ export const CONFIG = {
   // A "anon key" / "publishable key" é pública por natureza: quem protege os dados
   // são as regras do banco (supabase/schema.sql). NUNCA coloque aqui a "service_role".
   supabase: {
-    url: "",
-    anonKey: "",
+    url: "https://smecdstrxyheyqfwhpbs.supabase.co",
+    anonKey: "sb_publishable_kEUagmN1NxEu7Rd8ziSd4g_cfofNalC",
   },
 
   // De quanto em quanto tempo o site busca novidades enquanto está aberto.
